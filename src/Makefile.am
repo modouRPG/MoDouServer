@@ -1,1 +1,1 @@
-subdir=login character
+subdir=login character map

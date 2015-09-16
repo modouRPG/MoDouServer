@@ -1,7 +1,8 @@
-#include "LoginServer.h"
+#include "MapServer.h"
 #include <iostream>
 #include <fcntl.h>
 #include <netinet/tcp.h>
+#include "Session.h"
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,7 +13,7 @@
 
 namespace modou
 {
-    LoginServer::LoginServer(string ip, int port) : mPort(port)
+    MapServer::MapServer(string ip, int port) : mPort(port)
     {
         if (inet_aton(ip.c_str(), &mAddr) == 0) {
             cerr << "Invalid ip addr." << endl;
@@ -22,10 +23,10 @@ namespace modou
         mEpoll = epoll_create(mMaxClient);
     }
 
-    LoginServer::~LoginServer()
+    MapServer::~MapServer()
     {}
 
-    void LoginServer::start()
+    void MapServer::start()
     {
         init();
         while(1) {
@@ -34,7 +35,7 @@ namespace modou
         }
     }
 
-    void LoginServer::init()
+    void MapServer::init()
     {
         int yes = 1;
         int flag = fcntl(mSock, F_GETFL, 0);
@@ -60,7 +61,7 @@ namespace modou
         epoll_ctl(mEpoll, EPOLL_CTL_ADD, mSock, &ev);
     }
 
-    void LoginServer::sendrecv()
+    void MapServer::sendrecv()
     {
         int nfds, uSock;
         struct sockaddr_in peer;
@@ -126,46 +127,42 @@ namespace modou
         }
     }
 
-    uint8_t LoginServer::auth(string email, string pass)
+    void MapServer::parse(Session *sess)
     {
-        return 1;
-    }
+      uint8_t flag, ret;
+      
+      if (sess->eof)  {
+	return;
+      }
+      flag = GET_FLAG(sess);
+      switch(flag) {
+      case SAY_TO_NPC_FLAG:
+	//say_to_npc_pkg *pkg = (say_to_npc_pkg *)GET_DATA(sess);
+	
+	break;
+      case GET_NPC_BY_MAP_POS:
+	get_npc_by_map_pos_pkg *pkg = (get_npc_by_map_pos_pkg *)GET_DATA(sess);
 
-    void LoginServer::parse(Session *sess)
-    {
-        uint8_t flag, ret;
+	npcs_list_pkg *pkg2 = (npcs_list_pkg *)calloc(1, sizeof(npcs_list_pkg));
+	pkg2->flag = NPCS_LIST;
+	pkg2->num = 1;
 
-        if (sess->eof)  {
-            return;
-        }
-        flag = GET_FLAG(sess);
-        switch(flag) {
-            case LOGIN_FLAG:
-                login_req_pkg *pkg = (login_req_pkg *)GET_DATA(sess);
-                cout << pkg->email << " : " << pkg->pass << endl;
-                ret = auth(pkg->email, pkg->pass);
+	npc_info *npc = (npc_info *)calloc(1, sizeof(npc_info));
+	strcpy(npc->name, "老奶奶");
+	npc->picId = 1;
+	npc->posX = 544;
+	npc->posY = 288;
+	npc->width = 60;
+	npc->height = 60;
 
-                login_resp_pkg *pkg2 = (login_resp_pkg *)calloc(1, sizeof(login_resp_pkg));
-                pkg2->flag = LOGIN_RESP_FLAG;
-                pkg2->ecode = ret;
-                pkg2->num = 100;
-                strncpy(pkg2->token, "hello", 33);
-                memcpy(sess->out_buf + sess->out_data_len, pkg2, sizeof(login_resp_pkg));
-                sess->out_data_len += sizeof(login_resp_pkg);
-
-                printf("snum: %d\n", pkg2->num);
-
-                char_server *c_server = (char_server *)calloc(1, sizeof(char_server));
-                strncpy(c_server->name, "北京1区", 128);
-                c_server->ip = inet_addr("192.168.1.100");
-                c_server->port = 8080;
-                c_server->unum = 2;
-                memcpy(sess->out_buf + sess->out_data_len , c_server, sizeof(char_server));
-                sess->out_data_len += sizeof(char_server);
-
-                free(pkg2);
-                free(c_server);
-                break;
-        }
+	memcpy(sess->out_buf + sess->out_data_len, pkg2, sizeof(npcs_list_pkg));
+	sess->out_data_len += sizeof(npcs_list_pkg);
+	memcpy(sess->out_buf + sess->out_data_len, npc, sizeof(npc_info));
+	sess->out_data_len += sizeof(npc_info);
+	
+	free(pkg2);
+	free(npc);
+	break;
+      }
     }
 }
