@@ -89,6 +89,7 @@ namespace modou
                 s2->out_data_len = 0;
                 s2->out_size = OUT_BUF_LEN;
                 s2->mAddr = peer.sin_addr;
+		users.push_back(s2);
                 // end init
                 ev.data.ptr = s2;
                 epoll_ctl(mEpoll, EPOLL_CTL_ADD, uSock, &ev);
@@ -135,12 +136,14 @@ namespace modou
 	return;
       }
       flag = GET_FLAG(sess);
+      std::cout << flag << std::endl;
       switch(flag) {
       case SAY_TO_NPC_FLAG:
 	//say_to_npc_pkg *pkg = (say_to_npc_pkg *)GET_DATA(sess);
 	
 	break;
       case GET_NPC_BY_MAP_POS:
+	std::cout << " get npc by map pos pkg " << std::endl;
 	get_npc_by_map_pos_pkg *pkg = (get_npc_by_map_pos_pkg *)GET_DATA(sess);
 
 	npcs_list_pkg *pkg2 = (npcs_list_pkg *)calloc(1, sizeof(npcs_list_pkg));
@@ -159,6 +162,8 @@ namespace modou
 	sess->out_data_len += sizeof(npcs_list_pkg);
 	memcpy(sess->out_buf + sess->out_data_len, npc, sizeof(npc_info));
 	sess->out_data_len += sizeof(npc_info);
+
+	std::cout << " send npcs end " << std::endl;
 	
 	free(pkg2);
 	free(npc);

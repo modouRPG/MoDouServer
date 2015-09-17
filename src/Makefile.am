@@ -1,1 +1,1 @@
-subdir=login character map
+subdir=login character map chat

@@ -26,4 +26,5 @@ AC_CHECK_FUNCS([inet_ntoa memset socket])
 AC_OUTPUT([login/Makefile 
            character/Makefile
 		map/Makefile
+	chat/Makefile
            Makefile])

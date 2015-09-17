@@ -88,6 +88,7 @@ namespace modou
                 s2->out_data_len = 0;
                 s2->out_size = OUT_BUF_LEN;
                 s2->mAddr = peer.sin_addr;
+		users.push_back(s2);
                 // end init
                 ev.data.ptr = s2;
                 epoll_ctl(mEpoll, EPOLL_CTL_ADD, uSock, &ev);
@@ -148,7 +149,7 @@ namespace modou
                 login_resp_pkg *pkg2 = (login_resp_pkg *)calloc(1, sizeof(login_resp_pkg));
                 pkg2->flag = LOGIN_RESP_FLAG;
                 pkg2->ecode = ret;
-                pkg2->num = 100;
+                pkg2->num = 1;
                 strncpy(pkg2->token, "hello", 33);
                 memcpy(sess->out_buf + sess->out_data_len, pkg2, sizeof(login_resp_pkg));
                 sess->out_data_len += sizeof(login_resp_pkg);

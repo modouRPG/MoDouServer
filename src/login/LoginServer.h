@@ -33,7 +33,7 @@ namespace modou
             struct in_addr mAddr;
             struct epoll_event events[EVENT_LEN];
 
-            vector<Session> users;
+            vector< Session* > users;
 
             int mPort;
             int mSock;
