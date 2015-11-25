@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include "../net/pkg.h"
 
 //uint8_t buf[1024];
@@ -95,11 +96,17 @@ namespace modou
             } else {
                 if (events[i].events & EPOLLIN) {
                     cout << "in " << inet_ntoa(s1->mAddr) << endl;
-                    data_len = read(s1->mSocket, s1->in_buf + s1->in_data_len, s1->in_size - s1->in_data_len);
+                    //data_len = read(s1->mSocket, s1->in_buf + s1->in_data_len, s1->in_size - s1->in_data_len);
+                    data_len = recv(s1->mSocket, s1->in_buf + s1->in_data_len, s1->in_size - s1->in_data_len, 0);
+                    cout << "in " << inet_ntoa(s1->mAddr) << ": " << data_len <<  endl;
                     if (data_len > 0) {
                         s1->in_data_len += data_len;
-                    } else {
+                    } else if (data_len == 0) {
+		      cout << " no data recve" << endl;
+		      return;
+		    } else {
                         cout << "End of Conn. " << inet_ntoa(s1->mAddr) << endl;
+			perror("IN Error:");
                         s1->eof = 1;
                         epoll_ctl(mEpoll, EPOLL_CTL_DEL, s1->mSocket, NULL);
                         Session::clear(s1);
@@ -110,15 +117,22 @@ namespace modou
                     ev.data.ptr = s1;
                     epoll_ctl(mEpoll, EPOLL_CTL_MOD, s1->mSocket, &ev);
                 } else if (events[i].events & EPOLLOUT) {
-                    cout << "out " << inet_ntoa(s1->mAddr) << endl;
+                    //cout << "out " << inet_ntoa(s1->mAddr) << endl;
                     //write(s1->mSocket, "hello", sizeof("hello"));
-                    data_len = write(s1->mSocket, s1->out_buf, s1->out_data_len);
-                    cout << "Send Hello. "  << data_len << endl;
+                    //data_len = write(s1->mSocket, s1->out_buf, s1->out_data_len);
+                    data_len = send(s1->mSocket, s1->out_buf, s1->out_data_len, 0);
+                    cout << "out " << inet_ntoa(s1->mAddr) << ": " << data_len << endl;
                     if (data_len > 0) {
                         //TODO: 
                         s1->out_data_len -= data_len;
                         memset(s1->out_buf, 0, data_len);
-                    }
+                    } else if (data_len == 0) {
+		      cout << "no data to send" << endl;
+		      return;
+		    } else {
+		      cout << data_len << endl;
+		      perror("OUT ERROR");
+		    }
                     ev.events = EPOLLIN | EPOLLET;
                     ev.data.ptr = s1;
                     epoll_ctl(mEpoll, EPOLL_CTL_MOD, s1->mSocket, &ev);
@@ -144,11 +158,11 @@ namespace modou
 	  pkg = (say_msg_pkg *)GET_DATA(sess);
 	  std::cout << pkg->msg << std::endl;
 	  for(it = users.begin(); it != users.end(); it++) {
-	    if ((*it)->eof) {
+	    if ((*it)->eof || (*it)->mSocket == sess->mSocket) {
 	      continue;
 	    }
 	    pkg2->flag = MSG_LIST;
-	    strncpy(pkg2->msg, pkg->msg, 2037);
+	    strncpy(pkg2->msg, pkg->msg, 2047);
 	    send((*it)->mSocket, pkg2, sizeof(*pkg2), 0);
 	  }
         }

@@ -96,10 +96,13 @@ namespace modou
             } else {
                 if (events[i].events & EPOLLIN) {
                     cout << "in " << inet_ntoa(s1->mAddr) << endl;
-                    data_len = read(s1->mSocket, s1->in_buf + s1->in_data_len, s1->in_size - s1->in_data_len);
+                    //data_len = read(s1->mSocket, s1->in_buf + s1->in_data_len, s1->in_size - s1->in_data_len);
+                    data_len = recv(s1->mSocket, s1->in_buf + s1->in_data_len, s1->in_size - s1->in_data_len, 0);
                     if (data_len > 0) {
                         s1->in_data_len += data_len;
-                    } else {
+                    } else if (data_len == 0 ) {
+		      return;
+		    } else {
                         cout << "End of Conn. " << inet_ntoa(s1->mAddr) << endl;
                         s1->eof = 1;
                         epoll_ctl(mEpoll, EPOLL_CTL_DEL, s1->mSocket, NULL);
@@ -113,13 +116,16 @@ namespace modou
                 } else if (events[i].events & EPOLLOUT) {
                     cout << "out " << inet_ntoa(s1->mAddr) << endl;
                     //write(s1->mSocket, "hello", sizeof("hello"));
-                    data_len = write(s1->mSocket, s1->out_buf, s1->out_data_len);
+                    //data_len = write(s1->mSocket, s1->out_buf, s1->out_data_len);
+                    data_len = send(s1->mSocket, s1->out_buf, s1->out_data_len, 0);
                     cout << "Send Hello. "  << data_len << endl;
                     if (data_len > 0) {
                         //TODO: 
                         s1->out_data_len -= data_len;
                         memset(s1->out_buf, 0, data_len);
-                    }
+                    } else if (data_len == 0) {
+		      return;
+		    }
                     ev.events = EPOLLIN | EPOLLET;
                     ev.data.ptr = s1;
                     epoll_ctl(mEpoll, EPOLL_CTL_MOD, s1->mSocket, &ev);
